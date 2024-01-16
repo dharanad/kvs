@@ -1,14 +1,21 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
+pub struct KvStore {
+
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+impl KvStore {
+    pub fn new() -> Self {
+        Self {}
+    }
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+    pub fn set(&mut self, key: String, value: String) {
+        unimplemented!()
+    }
+
+    pub fn get(&self, key: String) -> Option<String> {
+        unimplemented!()
+    }
+
+    pub fn remove(&mut self, key: String) {
+        unimplemented!()
     }
 }
