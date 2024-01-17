@@ -9,6 +9,7 @@ description = "A key-value store"
 
 [dependencies]
 clap = { version = "4.4.17", features = ["derive"] }
+anyhow = "1.0"
 
 # Dev-dependencies are not used when compiling a package for building,
 # but are used for compiling tests, examples, and benchmarks.
