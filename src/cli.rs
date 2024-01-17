@@ -6,7 +6,7 @@ use clap::{Args, Parser, Subcommand};
 pub struct Cli {
     /// The command to run.
     #[command(subcommand)]
-    pub command: Option<Command>
+    pub command: Option<Command>,
 }
 /// Enum representing the possible commands.
 #[derive(Subcommand)]
@@ -17,13 +17,13 @@ pub enum Command {
     Set(SetArgs),
     /// Removes a given key
     #[clap(name = "rm")]
-    Remove(RemoveArgs)
+    Remove(RemoveArgs),
 }
 /// Struct representing the arguments for the get command.
 #[derive(Args)]
 pub struct GetArgs {
     /// The key.
-    pub key: String
+    pub key: String,
 }
 /// Struct representing the arguments for the set command.
 #[derive(Args)]
@@ -31,11 +31,11 @@ pub struct SetArgs {
     /// The key.
     pub key: String,
     /// The value.
-    pub value: String
+    pub value: String,
 }
 /// Struct representing the arguments for the remove command.
 #[derive(Args)]
 pub struct RemoveArgs {
     /// The key.
-    pub key: String
+    pub key: String,
 }

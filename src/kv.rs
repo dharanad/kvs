@@ -3,14 +3,14 @@ use std::collections::HashMap;
 /// Key-value store implementation.
 pub struct KvStore {
     /// The store.
-    store: HashMap<String, String>
+    store: HashMap<String, String>,
 }
 
 impl KvStore {
     /// Creates a new instance of KvStore.
     pub fn new() -> Self {
         Self {
-            store: HashMap::new()
+            store: HashMap::new(),
         }
     }
 
@@ -34,14 +34,7 @@ impl KvStore {
     ///
     /// The value associated with the key, if it exists.
     pub fn get(&self, key: String) -> Option<String> {
-        match self.store.get(&key) {
-            Some(val) => {
-                Option::Some(val.to_owned())
-            }
-            None => {
-                Option::None
-            }
-        }
+        self.store.get(&key).map(|val| val.to_owned())
     }
 
     /// Removes the key-value pair associated with the given key from the store.
@@ -51,5 +44,11 @@ impl KvStore {
     /// * `key` - The key.
     pub fn remove(&mut self, key: String) {
         let _ = &self.store.remove(&key);
+    }
+}
+
+impl Default for KvStore {
+    fn default() -> Self {
+        Self::new()
     }
 }
