@@ -1,6 +1,8 @@
 use clap::Parser;
+
 use kvs::{KvStore, Result};
 use kvs::{Cli, Command};
+
 fn main() -> Result<()> {
     let mut _kvs = KvStore::new();
     let cli = Cli::parse();

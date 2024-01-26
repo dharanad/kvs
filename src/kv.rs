@@ -2,8 +2,7 @@ use std::{collections::HashMap, path::Path};
 
 use anyhow::Ok;
 
-/// KvStore custom error
-pub type Result<T> = anyhow::Result<T>;
+use crate::Result;
 
 /// Key-value store implementation.
 pub struct KvStore {

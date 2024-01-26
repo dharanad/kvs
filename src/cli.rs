@@ -8,6 +8,7 @@ pub struct Cli {
     #[command(subcommand)]
     pub command: Option<Command>,
 }
+
 /// Enum representing the possible commands.
 #[derive(Subcommand)]
 pub enum Command {
@@ -19,12 +20,14 @@ pub enum Command {
     #[clap(name = "rm")]
     Remove(RemoveArgs),
 }
+
 /// Struct representing the arguments for the get command.
 #[derive(Args)]
 pub struct GetArgs {
     /// The key.
     pub key: String,
 }
+
 /// Struct representing the arguments for the set command.
 #[derive(Args)]
 pub struct SetArgs {
@@ -33,6 +36,7 @@ pub struct SetArgs {
     /// The value.
     pub value: String,
 }
+
 /// Struct representing the arguments for the remove command.
 #[derive(Args)]
 pub struct RemoveArgs {
