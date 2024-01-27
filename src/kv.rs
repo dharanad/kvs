@@ -1,26 +1,57 @@
-use std::{collections::HashMap, path::Path};
+use std::path::Path;
+use std::path::PathBuf;
 
 use anyhow::Ok;
 
+use crate::datafile::DataFile;
+use crate::key_dir::KeyDir;
 use crate::Result;
 
 /// Key-value store implementation.
 pub struct KvStore {
-    /// The store.
-    store: HashMap<String, String>,
+    path: PathBuf,
+    active_datafile: DataFile,
+    // FIXME: Scan for data file in path
+    old_datafiles: Vec<DataFile>,
+    key_dir: KeyDir
 }
 
 impl KvStore {
     /// Creates a new instance of KvStore.
     pub fn new() -> Self {
+        // FIXME: Should we keep this method
+        match std::fs::create_dir_all("./db/data") {
+            std::prelude::rust_2015::Ok(_) => {}
+            Err(e) => {
+                if e.kind() != std::io::ErrorKind::AlreadyExists {
+                    panic!("Error creating directory {:?}", e);
+                }
+            }
+        };
+        let mut df = DataFile::open(PathBuf::from("./db/data")).unwrap();
+        let mut key_dir = KeyDir::new();
+        // FIXME
+        df.update_key_dir(&mut key_dir);
         Self {
-            store: HashMap::new(),
+            active_datafile: df,
+            path: PathBuf::from("./db"),
+            old_datafiles: Vec::new(),
+            key_dir,
         }
     }
 
     /// Opens a KvStore at the given path.
     pub fn open(path: &Path) -> Result<KvStore> {
-        panic!("unimplemented")
+        let df = DataFile::open(path.to_owned()).unwrap();
+        let mut key_dir = KeyDir::new();
+        // FIXME
+        df.update_key_dir(&mut key_dir);
+        Ok(Self {
+            active_datafile: df,
+            path: path.to_owned(),
+            old_datafiles: Vec::new(),
+            key_dir
+        })
     }
 
     /// Sets a key-value pair in the store.
@@ -30,7 +61,14 @@ impl KvStore {
     /// * `key` - The key.
     /// * `value` - The value.
     pub fn set(&mut self, key: String, value: String) -> Result<()> {
-        self.store.insert(key, value);
+        let key_bytes =  key.as_bytes().to_vec();
+        let value_bytes =  value.as_bytes().to_vec();
+        let value_sz =  value_bytes.len() as u64;
+        // Write the key value entry to datafile
+        let value_offset = self.active_datafile.write(key_bytes, value_bytes)?;
+        let file_id = self.active_datafile.id.to_owned();
+        // Update key dir
+        &self.key_dir.put(file_id, key, value_offset, value_sz);
         Ok(())
     }
 
@@ -44,7 +82,14 @@ impl KvStore {
     ///
     /// The value associated with the key, if it exists.
     pub fn get(&self, key: String) -> Result<Option<String>> {
-        Ok(self.store.get(&key).map(|val| val.to_owned()))
+        if !self.key_dir.contains_key(&key) {
+            return Ok(None)
+        }
+        // get key metadata from key dir
+        let e = self.key_dir.get(&key).unwrap();
+        // FIXME: Find file with file_id
+        let read_op = self.active_datafile.read(e.value_offset, e.value_sz)?;
+        Ok(Some(std::str::from_utf8(&read_op).unwrap().to_string()))
     }
 
     /// Removes the key-value pair associated with the given key from the store.
@@ -53,8 +98,7 @@ impl KvStore {
     ///
     /// * `key` - The key.
     pub fn remove(&mut self, key: String) -> Result<()> {
-        let _ = &self.store.remove(&key);
-        Ok(())
+        unimplemented!();
     }
 }
 
