@@ -9,6 +9,7 @@ mod cli;
 mod kv;
 mod log_entry;
 mod datafile;
+mod key_dir;
 
 /// KvStore custom error
 pub type Result<T> = anyhow::Result<T>;

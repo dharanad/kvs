@@ -1,9 +1,11 @@
 use std::fs::File;
-use std::io::{Read, Seek, SeekFrom, Write};
+use std::io::{BufReader, Read, Seek, SeekFrom, Write};
 use std::os::unix::prelude::FileExt;
 use std::path::PathBuf;
+use anyhow::__private::kind::TraitKind;
 
 use anyhow::anyhow;
+use crate::key_dir::KeyDir;
 
 use crate::LogEntry;
 use crate::Result;
@@ -71,6 +73,36 @@ impl DataFile {
             return Err(anyhow!("incomplete read"));
         }
         Ok(buf)
+    }
+
+    pub fn update_key_dir(&self, key_dir: &mut KeyDir) {
+        let mut reader = BufReader::new(&self.inner);
+        reader.seek(SeekFrom::Start(0)).unwrap();
+        let mut offset = 0u64;
+        let file_id = self.id.to_owned();
+        loop {
+            let res: std::result::Result<LogEntry, bincode::error::DecodeError> = bincode::decode_from_reader(&mut reader,
+                                                    bincode::config::standard()
+                                                        .with_fixed_int_encoding());
+            match res {
+                Ok(entry) => {
+                    let key_sz = entry.key.len() as u64;
+                    let value_sz = entry.value.len() as u64;
+                    let value_offset = offset + 16 + key_sz;
+                    key_dir.put(
+                        file_id.to_owned(),
+                        std::str::from_utf8(&entry.key).unwrap().to_string(),
+                        value_offset,
+                        value_sz
+                    );
+                    offset += 16 + key_sz + value_sz;
+                }
+                Err(e) => {
+                    //FIXME
+                    break;
+                }
+            }
+        }
     }
 
     pub fn close(&mut self) -> Result<()> {
