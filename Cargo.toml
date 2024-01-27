@@ -12,6 +12,7 @@ clap = { version = "4.4.17", features = ["derive"] }
 anyhow = "1.0"
 ron = "0.8"
 bincode = "2.0.0-rc.3"
+rand = "0.8.5"
 
 # Dev-dependencies are not used when compiling a package for building,
 # but are used for compiling tests, examples, and benchmarks.

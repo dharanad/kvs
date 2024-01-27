@@ -12,8 +12,6 @@ use bincode::{Decode, Encode};
 */
 #[derive(Debug, Encode, Decode)]
 pub struct LogEntry {
-    // pub ksz: u8,
-    // pub vsz: u32,
     pub key: Vec<u8>,
     pub value: Vec<u8>,
 }
