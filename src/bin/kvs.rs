@@ -4,16 +4,22 @@ use kvs::{KvStore, Result};
 use kvs::{Cli, Command};
 
 fn main() -> Result<()> {
-    let mut _kvs = KvStore::new();
+    let pwd = std::env::current_dir().unwrap();
+    let mut kvs = KvStore::open(&pwd)?;
     let cli = Cli::parse();
     match cli.command {
-        Some(Command::Get(_args)) => {
-            // kvs.get(args.key);
-            panic!("unimplemented")
+        Some(Command::Get(args)) => {
+            match kvs.get(args.key)? {
+                Some(v) => {
+                    println!("{}", v)
+                }
+                None => {
+                    println!("Key not found")
+                }
+            }
         }
-        Some(Command::Set(_args)) => {
-            // kvs.set(args.key, args.value);
-            panic!("unimplemented")
+        Some(Command::Set(args)) => {
+            kvs.set(args.key, args.value)?;
         }
         Some(Command::Remove(_args)) => {
             // kvs.remove(args.key)
@@ -23,4 +29,5 @@ fn main() -> Result<()> {
             panic!("unimplemented")
         }
     }
+    Ok(())
 }
