@@ -64,6 +64,7 @@ impl KvStore {
         if value.is_empty() {
             return Err(anyhow!("value cannot be empty"));
         }
+        // FIXME Check and run compaction here
         self._key(key, value)
     }
 
@@ -74,6 +75,8 @@ impl KvStore {
         // Write the key value entry to datafile
         let value_offset = self.active_datafile.write(key_bytes, value_bytes)?;
         let file_id = self.active_datafile.id.to_owned();
+        // FIXME: Below line add side effects to this method
+        // We should move that away
         // Update key dir
         &self.key_dir.put(file_id, key, value_offset, value_sz);
         Ok(())

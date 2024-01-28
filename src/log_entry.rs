@@ -10,7 +10,7 @@ use bincode::{Decode, Encode};
 * u64 | vec<u8> | u64 | vec<u8>
 * u64 -> 8 bytes
 */
-#[derive(Debug, Encode, Decode)]
+#[derive(Debug, Encode, Decode, Clone)]
 pub struct LogEntry {
     pub key: Vec<u8>,
     pub value: Vec<u8>,

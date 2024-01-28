@@ -1,5 +1,6 @@
+use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufReader, Read, Seek, SeekFrom, Write};
+use std::io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write};
 use std::os::unix::prelude::FileExt;
 use std::path::PathBuf;
 use anyhow::__private::kind::TraitKind;
@@ -16,6 +17,7 @@ pub struct DataFile {
     pub id: String,
     offset: u64,
     is_mutable: bool,
+    path: PathBuf,
 }
 
 impl DataFile {
@@ -32,13 +34,14 @@ impl DataFile {
             .create(true)
             .append(true)
             .read(true)
-            .open(path)?;
+            .open(path.clone())?;
         let offset = f.seek(SeekFrom::End(0))?;
         Ok(DataFile {
             inner: f,
             id: file_name,
             offset,
             is_mutable: true,
+            path
         })
     }
 
@@ -53,7 +56,7 @@ impl DataFile {
             value,
         };
         // Move offset to last written pos
-        self.inner.seek(SeekFrom::Start(self.offset))?;
+        self.inner.seek(SeekFrom::End(0))?;
         let value_offset = self.offset + 16 + ksz;
         let bin = bincode::encode_to_vec(&entry,
                                          bincode::config::standard()
@@ -63,6 +66,10 @@ impl DataFile {
             return Err(anyhow!("incomplete write"));
         }
         self.offset += bin.len() as u64;
+        // FIXME
+        if self.offset > 512 {
+            self.compact()?;
+        }
         Ok(value_offset)
     }
 
@@ -112,9 +119,74 @@ impl DataFile {
         }
     }
 
+    pub fn scan_log(&self) -> Result<Vec<LogEntry>> {
+        let mut r: Vec<LogEntry> = Vec::new();
+        let mut reader = BufReader::new(&self.inner);
+        reader.seek(SeekFrom::Start(0)).unwrap();
+        let mut offset = 0u64;
+        loop {
+            let res: std::result::Result<LogEntry, bincode::error::DecodeError>
+                = bincode::decode_from_reader(&mut reader,
+                                              bincode::config::standard()
+                                                  .with_fixed_int_encoding());
+            match res {
+                Ok(entry) => {
+                    r.push(entry)
+                    // let key_sz = entry.key.len() as u64;
+                    // let value_sz = entry.value.len() as u64;
+                    // let key_offset = offset;
+                    // let value_offset = key_offset + 16 + key_sz;
+                    //
+                    // r.push(ScanMetadata {
+                    //     key: entry.key,
+                    //     value: entry.value,
+                    //     key_offset,
+                    //     value_offset
+                    // });
+                    //
+                    // offset += 16 + key_sz + value_sz;
+                }
+                Err(e) => {
+                    //FIXME
+                    break;
+                }
+            }
+        }
+        Ok(r)
+    }
+
     pub fn close(&mut self) -> Result<()> {
         self.inner.sync_data()?;
         self.is_mutable = false;
+        Ok(())
+    }
+
+    pub fn compact(&mut self) -> Result<()> {
+        // std::fs::copy(&self.path, self.path.join(".bkp"))?;
+        let scan_metadata = self.scan_log()?;
+        // Run Compaction
+        let mut map: HashMap<Vec<u8>, LogEntry> = HashMap::new();
+        for le in scan_metadata {
+            if le.value.len() > 0 {
+                map.insert(le.key.to_owned(), le.clone());
+            } else {
+                map.remove(&le.key);
+            }
+        }
+        std::fs::remove_file(&self.path)?;
+        let f = File::options()
+            .create(true)
+            .append(true)
+            .read(true)
+            .open(self.path.clone())?;
+        let mut writer = BufWriter::new(&f);
+        for (_, val) in map {
+            let v = bincode::encode_to_vec(
+                val, bincode::config::standard().with_fixed_int_encoding()).unwrap();
+            writer.write(&v).unwrap();
+        }
+        drop(writer);
+        self.inner = f;
         Ok(())
     }
 }
