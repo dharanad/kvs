@@ -3,8 +3,9 @@ use std::path::PathBuf;
 
 use anyhow::{anyhow, Ok};
 
-use crate::datafile::DataFile;
+use crate::datafile::{DataFile, DataFileIterator};
 use crate::index::KeyDir;
+use crate::log_entry::LogEntry;
 use crate::Result;
 
 /// Key-value store implementation.
@@ -17,35 +18,12 @@ pub struct KvStore {
 }
 
 impl KvStore {
-    /// Creates a new instance of KvStore.
-    pub fn new() -> Self {
-        // FIXME: Should we keep this method
-        match std::fs::create_dir_all("./db/data") {
-            std::prelude::rust_2015::Ok(_) => {}
-            Err(e) => {
-                if e.kind() != std::io::ErrorKind::AlreadyExists {
-                    panic!("Error creating directory {:?}", e);
-                }
-            }
-        };
-        let mut df = DataFile::open(PathBuf::from("./db/data")).unwrap();
-        let mut key_dir = KeyDir::new();
-        // FIXME
-        df.update_key_dir(&mut key_dir);
-        Self {
-            active_datafile: df,
-            path: PathBuf::from("./db"),
-            old_datafiles: Vec::new(),
-            key_dir,
-        }
-    }
 
     /// Opens a KvStore at the given path.
     pub fn open(path: &Path) -> Result<KvStore> {
         let df = DataFile::open(path.to_owned()).unwrap();
         let mut key_dir = KeyDir::new();
-        // FIXME
-        df.update_key_dir(&mut key_dir);
+        Self::init_index(&df, &mut key_dir);
         Ok(Self {
             active_datafile: df,
             path: path.to_owned(),
@@ -64,7 +42,12 @@ impl KvStore {
         if value.is_empty() {
             return Err(anyhow!("value cannot be empty"));
         }
-        // FIXME Check and run compaction here
+        // FIXME: Move compaction to background thread
+        if self.active_datafile.size()? > 10 * 1024 /* 10KB */ {
+            self.active_datafile.compact()?;
+            Self::init_index(&self.active_datafile, &mut self.key_dir);
+        }
+        // FIXME Keep track of file size. Then Check and run compaction here
         self._key(key, value)
     }
 
@@ -78,7 +61,9 @@ impl KvStore {
         // FIXME: Below line add side effects to this method
         // We should move that away
         // Update key dir
-        &self.key_dir.put(file_id, key, value_offset, value_sz);
+        if value_sz > 0 {
+            let _ = &self.key_dir.put(file_id, key, value_offset, value_sz);
+        }
         Ok(())
     }
 
@@ -97,7 +82,6 @@ impl KvStore {
         }
         // get key metadata from key dir
         let e = self.key_dir.get(&key).unwrap();
-        // FIXME: Find file with file_id
         let read_op = self.active_datafile.read(e.value_offset, e.value_sz)?;
         Ok(Some(std::str::from_utf8(&read_op).unwrap().to_string()))
     }
@@ -109,16 +93,34 @@ impl KvStore {
     /// * `key` - The key.
     pub fn remove(&mut self, key: String) -> Result<()> {
         if self.key_dir.contains_key(&key) {
-            let res = self._key(key.clone(), "".to_string());
             let _ = self.key_dir.remove_key(&key).is_some();
-            return res;
+            return self._key(key.clone(), "".to_string())
         }
         return Err(anyhow!("Key not found"))
     }
-}
 
-impl Default for KvStore {
-    fn default() -> Self {
-        Self::new()
+
+    /// Initializes the index
+    fn init_index(datafile: &DataFile, key_dir: &mut KeyDir) {
+        let reader = DataFileIterator::new(datafile.path()).unwrap();
+        let file_id = datafile.id.to_owned();
+        for res in reader {
+            let key = std::str::from_utf8(&res.key).unwrap().to_string();
+            let value_offset = res.value_offset;
+            let le: LogEntry = res.into();
+            let value_sz = le.value_size();
+            if value_sz > 0 {
+                key_dir.put(
+                    file_id.to_owned(),
+                    key.clone(),
+                    value_offset,
+                    value_sz
+                );
+            } else { // value_sz == 0 represent a deleted key
+                if key_dir.contains_key(&key) {
+                    key_dir.remove_key(&key);
+                }
+            }
+        }
     }
 }

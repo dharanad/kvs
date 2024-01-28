@@ -67,11 +67,14 @@ impl DataFile {
         &self.path
     }
 
+    #[allow(dead_code)]
+    // FIXME
     pub fn read_all(&self) -> Result<Vec<LogEntry>> {
         self.reader.read_all()
     }
 
     pub fn compact(&mut self) -> Result<()> {
+        // FIXME: Re implement this function
         let mut map: HashMap<Vec<u8>, LogEntry> = HashMap::new();
         let itr = DataFileIterator::new(&self.path)?;
         for le in itr {
@@ -94,8 +97,15 @@ impl DataFile {
             writer.write(&v).unwrap();
         }
         drop(writer);
+
         self.inner = f;
+        self.writer = DataFileWriter::new(&self.path)?;
+        self.reader = DataFileReader::new(&self.path)?;
         Ok(())
+    }
+
+    pub fn size(&self) -> Result<u64> {
+        Ok(self.inner.metadata().unwrap().len())
     }
 }
 
@@ -178,7 +188,7 @@ struct DataFileReader {
 
 impl DataFileReader {
     pub fn new(path: &PathBuf) -> Result<Self> {
-        let mut f = File::options()
+        let f = File::options()
             .read(true)
             .open(path)?;
         Ok(DataFileReader {
@@ -195,6 +205,7 @@ impl DataFileReader {
     }
 
     // FIXME: Fix the offset or add docs around offset
+    #[allow(dead_code)]
     pub fn read_all(&self) -> Result<Vec<LogEntry>> {
         let mut r: Vec<LogEntry> = Vec::new();
         let mut reader = BufReader::new(&self.inner);
