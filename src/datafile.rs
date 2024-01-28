@@ -86,15 +86,22 @@ impl DataFile {
                                                         .with_fixed_int_encoding());
             match res {
                 Ok(entry) => {
+                    let key = std::str::from_utf8(&entry.key).unwrap().to_string();
                     let key_sz = entry.key.len() as u64;
                     let value_sz = entry.value.len() as u64;
                     let value_offset = offset + 16 + key_sz;
-                    key_dir.put(
-                        file_id.to_owned(),
-                        std::str::from_utf8(&entry.key).unwrap().to_string(),
-                        value_offset,
-                        value_sz
-                    );
+                    // value_sz == 0 represent a deleted key
+                    if value_sz > 0 {
+                        key_dir.put(
+                            file_id.to_owned(),
+                            key.clone(),
+                            value_offset,
+                            value_sz
+                        );
+                    }
+                    if value_sz == 0 && key_dir.contains_key(&key) {
+                        key_dir.remove_key(&key);
+                    }
                     offset += 16 + key_sz + value_sz;
                 }
                 Err(e) => {

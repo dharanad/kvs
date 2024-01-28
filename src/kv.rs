@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::path::PathBuf;
 
-use anyhow::Ok;
+use anyhow::{anyhow, Ok};
 
 use crate::datafile::DataFile;
 use crate::key_dir::KeyDir;
@@ -61,9 +61,16 @@ impl KvStore {
     /// * `key` - The key.
     /// * `value` - The value.
     pub fn set(&mut self, key: String, value: String) -> Result<()> {
-        let key_bytes =  key.as_bytes().to_vec();
-        let value_bytes =  value.as_bytes().to_vec();
-        let value_sz =  value_bytes.len() as u64;
+        if value.is_empty() {
+            return Err(anyhow!("value cannot be empty"));
+        }
+        self._key(key, value)
+    }
+
+    fn _key(&mut self, key: String, value: String) -> Result<()> {
+        let key_bytes = key.as_bytes().to_vec();
+        let value_bytes = value.as_bytes().to_vec();
+        let value_sz = value_bytes.len() as u64;
         // Write the key value entry to datafile
         let value_offset = self.active_datafile.write(key_bytes, value_bytes)?;
         let file_id = self.active_datafile.id.to_owned();
@@ -98,7 +105,12 @@ impl KvStore {
     ///
     /// * `key` - The key.
     pub fn remove(&mut self, key: String) -> Result<()> {
-        unimplemented!();
+        if self.key_dir.contains_key(&key) {
+            let res = self._key(key.clone(), "".to_string());
+            let _ = self.key_dir.remove_key(&key).is_some();
+            return res;
+        }
+        return Err(anyhow!("Key not found"))
     }
 }
 

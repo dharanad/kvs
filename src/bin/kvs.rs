@@ -21,9 +21,16 @@ fn main() -> Result<()> {
         Some(Command::Set(args)) => {
             kvs.set(args.key, args.value)?;
         }
-        Some(Command::Remove(_args)) => {
-            // kvs.remove(args.key)
-            panic!("unimplemented")
+        Some(Command::Remove(args)) => {
+            return match kvs.remove(args.key) {
+                Ok(_) => {
+                    Ok(())
+                }
+                Err(e) => {
+                    println!("{}",e);
+                    Err(e)
+                }
+            }
         }
         None => {
             panic!("unimplemented")

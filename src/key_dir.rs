@@ -36,4 +36,8 @@ impl KeyDir {
     pub fn contains_key(&self, key: &str) -> bool {
         self.inner.contains_key(key)
     }
+
+    pub fn remove_key(&mut self, key: &str) -> Option<Entry> {
+        self.inner.remove(key)
+    }
 }
