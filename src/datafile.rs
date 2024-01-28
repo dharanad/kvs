@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use anyhow::__private::kind::TraitKind;
 
 use anyhow::anyhow;
-use crate::key_dir::KeyDir;
+use crate::index::KeyDir;
 
 use crate::LogEntry;
 use crate::Result;

@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use anyhow::{anyhow, Ok};
 
 use crate::datafile::DataFile;
-use crate::key_dir::KeyDir;
+use crate::index::KeyDir;
 use crate::Result;
 
 /// Key-value store implementation.
