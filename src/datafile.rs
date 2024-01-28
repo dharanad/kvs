@@ -191,6 +191,60 @@ impl DataFile {
     }
 }
 
+struct DataFileIterator {
+    inner: BufReader<File>,
+    offset: u64
+}
+
+struct LogReadResult {
+    key: Vec<u8>,
+    value: Vec<u8>,
+    key_offset: u64,
+    value_offset: u64
+}
+
+impl DataFileIterator {
+    pub fn new(path: &PathBuf) -> Result<Self> {
+        let f = File::open(path)?;
+        let reader = BufReader::new(f);
+        Ok(DataFileIterator {
+            inner: reader,
+            offset: 0
+        })
+    }
+}
+
+impl Iterator for DataFileIterator {
+    type Item = LogReadResult;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let res: std::result::Result<LogEntry, bincode::error::DecodeError>
+            = bincode::decode_from_reader(&mut self.inner,
+                                          bincode::config::standard()
+                                              .with_fixed_int_encoding());
+        match res {
+            Ok(le) => {
+                let key_offset = self.offset + 8;
+                let value_offset = key_offset + le.key.len() as u64 + 8;
+                // Update offset
+                self.offset += value_offset + le.value.len();
+                Some(LogReadResult {
+                    key: le.key,
+                    value: le.value,
+                    key_offset,
+                    value_offset
+                })
+            }
+            Err(_e) => {
+                // FIXME
+                None
+            }
+        }
+    }
+}
+
+
+
 mod tests {
     use std::collections::HashMap;
     use std::path::PathBuf;
