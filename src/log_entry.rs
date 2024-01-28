@@ -12,3 +12,17 @@ pub struct LogEntry {
     pub value: Vec<u8>,
 }
 
+impl LogEntry {
+    pub fn size(&self) -> u64 {
+        return 16 + self.key_size() + self.value_size();
+    }
+
+    pub fn key_size(&self) -> u64 {
+        return self.key.len() as u64
+    }
+
+    pub fn value_size(&self) -> u64 {
+        return self.value.len() as u64
+    }
+}
+
