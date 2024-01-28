@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fs::File;
 use std::io;
-use std::io::{BufReader, BufWriter, Read, Seek, Write};
+use std::io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write};
 use std::os::unix::prelude::FileExt;
 use std::path::PathBuf;
 
@@ -30,7 +30,10 @@ impl DataFile {
         // FIXME: Change file name timestamp-rand_str.dat
         let file_name = "main.dat".to_string();
         let path = path.join(&file_name);
-        let inner = File::create(&path)?;
+        let inner = File::options()
+            .create(true)
+            .write(true)
+            .open(&path)?;
         let reader = DataFileReader::new(&path)?;
         let writer = DataFileWriter::new(&path)?;
         Ok(DataFile {
@@ -226,9 +229,10 @@ impl DataFileWriter {
         let mut f = File::options()
             .append(true)
             .open(path)?;
+        let offset = f.seek(SeekFrom::End(0))?;
         Ok(DataFileWriter {
             inner: f,
-            offset: 0,
+            offset,
             byte_written: 0,
         })
     }
@@ -256,7 +260,7 @@ impl DataFileWriter {
     }
 }
 
-
+#[cfg(test)]
 mod tests {
     use std::collections::HashMap;
 
