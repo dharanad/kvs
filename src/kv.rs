@@ -7,6 +7,7 @@ use crate::datafile::{DataFile, DataFileIterator};
 use crate::index::KeyDir;
 use crate::log_entry::LogEntry;
 use crate::Result;
+use crate::error::KvError;
 
 /// Key-value store implementation.
 pub struct KvStore {
@@ -40,7 +41,7 @@ impl KvStore {
     /// * `value` - The value.
     pub fn set(&mut self, key: String, value: String) -> Result<()> {
         if value.is_empty() {
-            return Err(anyhow!("value cannot be empty"));
+            return Err(anyhow!(KvError::EmptyValue));
         }
         // FIXME: Move compaction to background thread
         if self.active_datafile.size()? > 10 * 1024 /* 10KB */ {
@@ -96,7 +97,7 @@ impl KvStore {
             let _ = self.key_dir.remove_key(&key).is_some();
             return self._key(key.clone(), "".to_string())
         }
-        return Err(anyhow!("Key not found"))
+        return Err(anyhow!(KvError::KeyNotFound))
     }
 
 

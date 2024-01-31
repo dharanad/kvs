@@ -10,6 +10,7 @@ use anyhow::anyhow;
 
 use crate::LogEntry;
 use crate::Result;
+use crate::error::DataFileError;
 
 #[derive(Debug)]
 pub struct DataFile {
@@ -25,7 +26,7 @@ impl DataFile {
     pub fn open(path: PathBuf) -> Result<DataFile> {
         // Validate if path is a directory
         if !path.is_dir() {
-            return Err(anyhow::anyhow!("Path is not a directory"));
+            return Err(anyhow!(DataFileError::ErrNotADirectory));
         }
         // FIXME: Change file name timestamp-rand_str.dat
         let file_name = "main.dat".to_string();
@@ -199,7 +200,7 @@ impl DataFileReader {
         let mut buf = vec![0u8; value_size as usize];
         let bytes_read = self.inner.read_at(&mut buf, value_offset)?;
         if bytes_read != value_size as usize {
-            return Err(anyhow!("incomplete read"));
+            return Err(anyhow!(DataFileError::ErrIncompleteRead));
         }
         Ok(buf)
     }
@@ -259,7 +260,7 @@ impl DataFileWriter {
                                              .with_fixed_int_encoding())?;
         let bytes_written = self.inner.write(&bin)?;
         if bytes_written != bin.len() {
-            return Err(anyhow!("incomplete write"));
+            return Err(anyhow!(DataFileError::ErrIncompleteWrite));
         }
         self.byte_written += bytes_written as u64;
         self.offset += bytes_written as u64;
